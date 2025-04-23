@@ -308,3 +308,58 @@ class CryptoParser:
             prices.append([timestamp, price])
 
         return prices
+    def update_data(self):
+        threading.Thread(target=self.load_data, daemon=True).start()
+        self.root.after(60000, self.update_data)
+
+    def update_coin_list(self):
+        self.tree.delete(*self.tree.get_children())
+
+        for coin in self.coins:
+            change = coin.get('price_change_percentage_24h', 0)
+            change_text = f"{change:.2f}%" if change is not None else "N/A"
+            change_color = 'green' if change and change >= 0 else 'red'
+
+            self.tree.insert('', 'end',
+                             values=(
+                                 f"{coin['name']} ({coin['symbol'].upper()})",
+                                 f"${coin['current_price']:,.2f}",
+                                 change_text,
+                                 f"${coin['total_volume'] / 1000000:,.0f}M"
+                             ),
+                             tags=(change_color,),
+                             iid=coin['id']
+                             )
+
+        self.tree.tag_configure('green', foreground='#4CAF50')
+        self.tree.tag_configure('red', foreground='#F44336')
+
+    def filter_coins(self, event=None):
+        query = self.search_var.get().lower()
+
+        if not query:
+            self.update_coin_list()
+            return
+
+        filtered = [
+            c for c in self.coins
+            if query in c['name'].lower()
+               or query in c['symbol'].lower()
+        ]
+
+        self.tree.delete(*self.tree.get_children())
+        for coin in filtered:
+            change = coin.get('price_change_percentage_24h', 0)
+            change_text = f"{change:.2f}%" if change is not None else "N/A"
+            change_color = 'green' if change and change >= 0 else 'red'
+
+            self.tree.insert('', 'end',
+                             values=(
+                                 f"{coin['name']} ({coin['symbol'].upper()})",
+                                 f"${coin['current_price']:,.2f}",
+                                 change_text,
+                                 f"${coin['total_volume'] / 1000000:,.0f}M"
+                             ),
+                             tags=(change_color,),
+                             iid=coin['id']
+                             )
