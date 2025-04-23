@@ -582,3 +582,15 @@ class CryptoParser:
             text=f"Circulating Supply: {np.random.randint(10, 100)}M {self.selected_coin['symbol'].upper()}",
             font=('Helvetica', 10)
         ).pack(side='left', padx=10)
+
+        def update_chart(self):
+            if self.selected_coin:
+                self.load_chart_data()
+
+        def open_binance(self, symbol, action='buy'):
+            webbrowser.open(f"https://www.binance.com/en/trade/{symbol.upper()}_USDT?type=spot")
+
+    if __name__ == "__main__":
+        root = tk.Tk()
+        app = CryptoParser(root)
+        root.mainloop()
