@@ -211,3 +211,13 @@ class CryptoParser:
             anchor='w',
             font=('Helvetica', 9)
         )
+    def load_image_from_url(self, url, size=(30, 30)):
+        try:
+            response = requests.get(url, timeout=5)
+            img_data = response.content
+            img = Image.open(BytesIO(img_data))
+            img = img.resize(size, Image.Resampling.LANCZOS)
+            return ImageTk.PhotoImage(img)
+        except:
+            blank_img = Image.new('RGBA', size, (0, 0, 0, 0))
+            return ImageTk.PhotoImage(blank_img)
