@@ -252,3 +252,59 @@ class CryptoParser:
             self.create_demo_data()
         finally:
             self.update_in_progress = False
+    def get_historical_data(self, coin_id, days='max'):
+        try:
+            url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
+            params = {
+                'vs_currency': 'usd',
+                'days': days
+            }
+            response = requests.get(url, params=params)
+            return response.json()['prices']
+        except Exception as e:
+            print(f"Error getting history for {coin_id}: {e}")
+            return None
+
+    def create_demo_data(self):
+        self.coins = [
+            {
+                'id': 'bitcoin',
+                'symbol': 'btc',
+                'name': 'Bitcoin',
+                'current_price': 50000 + np.random.randint(-2000, 2000),
+                'price_change_percentage_24h': round(np.random.uniform(-5, 5), 2),
+                'market_cap': 950000000000 + np.random.randint(-100000000000, 100000000000),
+                'total_volume': 25000000000 + np.random.randint(-5000000000, 5000000000),
+                'image': 'https://assets.coingecko.com/coins/images/1/large/bitcoin.png'
+            },
+            {
+                'id': 'ethereum',
+                'symbol': 'eth',
+                'name': 'Ethereum',
+                'current_price': 3000 + np.random.randint(-200, 200),
+                'price_change_percentage_24h': round(np.random.uniform(-5, 5), 2),
+                'market_cap': 350000000000 + np.random.randint(-50000000000, 50000000000),
+                'total_volume': 18000000000 + np.random.randint(-3000000000, 3000000000),
+                'image': 'https://assets.coingecko.com/coins/images/279/large/ethereum.png'
+            }
+        ]
+
+        for coin in self.coins:
+            coin['history'] = self.generate_demo_history(coin['current_price'])
+
+        self.update_coin_list()
+
+    def generate_demo_history(self, current_price):
+        days = 365
+        volatility = 0.05
+
+        prices = []
+        price = current_price * np.random.uniform(0.8, 1.2)
+        now = time.time()
+
+        for day in range(days, -1, -1):
+            price = price * (1 + np.random.uniform(-volatility, volatility))
+            timestamp = now - day * 86400
+            prices.append([timestamp, price])
+
+        return prices
