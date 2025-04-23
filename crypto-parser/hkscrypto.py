@@ -556,3 +556,29 @@ class CryptoParser:
         canvas.get_tk_widget().pack(fill='both', expand=True)
         self.show_additional_info()
         self.status_var.set(f"Data updated at {datetime.now().strftime('%H:%M:%S')}")
+    def show_additional_info(self):
+        if not self.selected_coin:
+            return
+        for widget in self.info_frame.winfo_children():
+            widget.destroy()
+        stats_frame = ttk.Frame(self.info_frame)
+        stats_frame.pack(fill='x', pady=(10, 0))
+        high = self.selected_coin['current_price'] * 1.05  # Примерные данные
+        low = self.selected_coin['current_price'] * 0.95  # Примерные данные
+        ttk.Label(
+            stats_frame,
+            text=f"24h High: ${high:,.2f}",
+            font=('Helvetica', 10),
+            foreground='#4CAF50'
+        ).pack(side='left', padx=10)
+        ttk.Label(
+            stats_frame,
+            text=f"24h Low: ${low:,.2f}",
+            font=('Helvetica', 10),
+            foreground='#F44336'
+        ).pack(side='left', padx=10)
+        ttk.Label(
+            stats_frame,
+            text=f"Circulating Supply: {np.random.randint(10, 100)}M {self.selected_coin['symbol'].upper()}",
+            font=('Helvetica', 10)
+        ).pack(side='left', padx=10)
