@@ -221,3 +221,34 @@ class CryptoParser:
         except:
             blank_img = Image.new('RGBA', size, (0, 0, 0, 0))
             return ImageTk.PhotoImage(blank_img)
+    def load_data(self):
+        if self.update_in_progress:
+            return
+
+        self.update_in_progress = True
+        self.status_var.set("Loading data...")
+        try:
+            url = "https://api.coingecko.com/api/v3/coins/markets"
+            params = {
+                'vs_currency': 'usd',
+                'order': 'market_cap_desc',
+                'per_page': 100,
+                'page': 1,
+                'sparkline': False,
+                'price_change_percentage': '24h'
+            }
+            response = requests.get(url, params=params)
+            self.coins = response.json()
+            self.update_coin_list()
+
+            if self.selected_coin:
+                coin_id = self.selected_coin['id']
+                self.selected_coin = next((c for c in self.coins if c['id'] == coin_id), None)
+                if self.selected_coin:
+                    self.show_coin_details()
+            self.status_var.set(f"Data updated at {datetime.now().strftime('%H:%M:%S')}")
+        except Exception as e:
+            self.status_var.set(f"Error: {str(e)}")
+            self.create_demo_data()
+        finally:
+            self.update_in_progress = False
