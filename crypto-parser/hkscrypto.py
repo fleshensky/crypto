@@ -363,3 +363,196 @@ class CryptoParser:
                              tags=(change_color,),
                              iid=coin['id']
                              )
+    def sort_coins(self, column=None):
+        sort_mode = self.sort_var.get() if not column else column
+
+        reverse_sort = False
+        if sort_mode == 'market_cap':
+            key = lambda x: x['market_cap']
+            reverse_sort = True
+        elif sort_mode == 'price_asc':
+            key = lambda x: x['current_price']
+        elif sort_mode == 'price_desc':
+            key = lambda x: x['current_price']
+            reverse_sort = True
+        elif sort_mode == 'percent_asc':
+            key = lambda x: x.get('price_change_percentage_24h', 0)
+        elif sort_mode == 'percent_desc':
+            key = lambda x: x.get('price_change_percentage_24h', 0)
+            reverse_sort = True
+        elif sort_mode == 'volume':
+            key = lambda x: x['total_volume']
+            reverse_sort = True
+        elif sort_mode == 'name_asc':
+            key = lambda x: x['name']
+        elif sort_mode == 'name_desc':
+            key = lambda x: x['name']
+            reverse_sort = True
+        elif sort_mode == 'name':
+            key = lambda x: x['name']
+        elif sort_mode == 'price':
+            key = lambda x: x['current_price']
+        elif sort_mode == 'change':
+            key = lambda x: x.get('price_change_percentage_24h', 0)
+
+        self.coins.sort(key=key, reverse=reverse_sort)
+        self.update_coin_list()
+
+    def show_coin_details(self, event=None):
+        selected = self.tree.selection()
+        if not selected:
+            return
+
+        coin_id = selected[0]
+        self.selected_coin = next((c for c in self.coins if c['id'] == coin_id), None)
+        if not self.selected_coin:
+            return
+
+        for widget in self.detail_header.winfo_children():
+            widget.destroy()
+
+        for widget in self.price_frame.winfo_children():
+            widget.destroy()
+
+        for widget in self.chart_frame.winfo_children():
+            widget.destroy()
+
+        for widget in self.info_frame.winfo_children():
+            widget.destroy()
+
+        coin_img = self.load_image_from_url(
+            self.selected_coin.get('image', ''),
+            size=(50, 50)
+        )
+
+        img_label = ttk.Label(self.detail_header, image=coin_img)
+        img_label.image = coin_img
+        img_label.pack(side='left')
+
+        info_frame = ttk.Frame(self.detail_header)
+        info_frame.pack(side='left', padx=10, fill='x', expand=True)
+
+        ttk.Label(
+            info_frame,
+            text=f"{self.selected_coin['name']} ({self.selected_coin['symbol'].upper()})",
+            font=('Helvetica', 16, 'bold')
+        ).pack(anchor='w')
+        price = self.selected_coin['current_price']
+        change = self.selected_coin.get('price_change_percentage_24h', 0)
+        change_color = '#4CAF50' if change and change >= 0 else '#F44336'
+        price_frame = ttk.Frame(info_frame)
+        price_frame.pack(anchor='w')
+        ttk.Label(
+            price_frame,
+            text=f"${price:,.2f}",
+            font=('Helvetica', 14),
+            foreground='white'
+        ).pack(side='left')
+        if change is not None:
+            ttk.Label(
+                price_frame,
+                text=f" {change:+.2f}%",
+                font=('Helvetica', 12),
+                foreground=change_color
+            ).pack(side='left')
+        action_frame = ttk.Frame(self.price_frame)
+        action_frame.pack(side='left', padx=5)
+        buy_btn = ttk.Button(
+            action_frame,
+            text="Buy on Binance",
+            command=lambda: self.open_binance(self.selected_coin['symbol'], 'buy')
+        )
+        buy_btn.pack(side='left', padx=5)
+        sell_btn = ttk.Button(
+            action_frame,
+            text="Sell on Binance",
+            command=lambda: self.open_binance(self.selected_coin['symbol'], 'sell')
+        )
+        sell_btn.pack(side='left', padx=5)
+        stats_frame = ttk.Frame(self.price_frame)
+        stats_frame.pack(side='right')
+        ttk.Label(
+            stats_frame,
+            text=f"Market Cap: ${self.selected_coin['market_cap'] / 1000000000:,.2f}B",
+            font=('Helvetica', 10)
+        ).pack(anchor='e')
+        ttk.Label(
+            stats_frame,
+            text=f"24h Volume: ${self.selected_coin['total_volume'] / 1000000:,.0f}M",
+            font=('Helvetica', 10)
+        ).pack(anchor='e')
+        self.load_chart_data()
+    def load_chart_data(self):
+        if not self.selected_coin:
+            return
+        self.status_var.set("Loading chart data...")
+        for widget in self.chart_frame.winfo_children():
+            widget.destroy()
+        loading_frame = ttk.Frame(self.chart_frame)
+        loading_frame.pack(expand=True, fill='both')
+        ttk.Label(
+            loading_frame,
+            text="Loading chart data...",
+            font=('Helvetica', 12)
+        ).pack(expand=True)
+        threading.Thread(target=self._load_chart_data_thread, daemon=True).start()
+
+    def _load_chart_data_thread(self):
+        try:
+            days_map = {
+                '1d': '1',
+                '7d': '7',
+                '30d': '30',
+                '90d': '90',
+                '365d': '365',
+                'max': 'max'
+            }
+            days = days_map.get(self.timeframe_var.get(), '7')
+            history = self.get_historical_data(self.selected_coin['id'], days)
+
+            if not history and 'history' in self.selected_coin:
+                history = self.selected_coin['history']
+
+            self.root.after(0, lambda: self.draw_chart(history))
+
+        except Exception as e:
+            self.root.after(0, lambda: self.status_var.set(f"Chart error: {str(e)}"))
+    def draw_chart(self, history_data):
+        if not history_data:
+            ttk.Label(
+                self.chart_frame,
+                text="No historical data available",
+                foreground='gray'
+            ).pack(expand=True)
+            self.status_var.set("No chart data available")
+            return
+        for widget in self.chart_frame.winfo_children():
+            widget.destroy()
+        timestamps = [x[0] / 1000 for x in history_data]  # Convert to seconds
+        prices = [x[1] for x in history_data]
+        dates = [datetime.fromtimestamp(ts) for ts in timestamps]
+        fig = plt.Figure(figsize=(10, 5), dpi=100, facecolor='#0f1923')
+        ax = fig.add_subplot(111)
+        ax.set_facecolor('#0f1923')
+        for spine in ax.spines.values():
+            spine.set_color('#1a2d3d')
+        ax.tick_params(axis='both', colors='white')
+        ax.xaxis.label.set_color('white')
+        ax.yaxis.label.set_color('white')
+        ax.title.set_color('white')
+        line_color = '#4fc3f7'
+        ax.plot(dates, prices, color=line_color, linewidth=2)
+        ax.fill_between(dates, prices, min(prices), color=line_color, alpha=0.1)
+        date_format = DateFormatter('%Y-%m-%d')
+        ax.xaxis.set_major_formatter(date_format)
+        fig.autofmt_xdate()
+        ax.set_title(
+            f"{self.selected_coin['name']} Price History",
+            pad=20,
+            fontsize=12
+        )
+        canvas = FigureCanvasTkAgg(fig, master=self.chart_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill='both', expand=True)
+        self.show_additional_info()
+        self.status_var.set(f"Data updated at {datetime.now().strftime('%H:%M:%S')}")
