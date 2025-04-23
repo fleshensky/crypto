@@ -11,6 +11,8 @@ import threading
 from PIL import Image, ImageTk
 from io import BytesIO
 import time
+
+
 class CryptoParser:
     def __init__(self, root):
         self.root = root
@@ -24,41 +26,6 @@ class CryptoParser:
         self.update_in_progress = False
         self.load_data()
         self.root.after(60000, self.update_data)
-    def setup_styles(self):
-        self.style = ttk.Style()
-        self.style.theme_use('clam')
-        bg_color = '#0f1923'
-        card_color = '#1a2d3d'
-        accent_color = '#1e3d59'
-        text_color = 'white'
-        self.style.configure('TFrame', background=bg_color)
-        self.style.configure('TLabel', background=bg_color, foreground=text_color)
-        self.style.configure('Treeview',
-                             background=card_color,
-                             fieldbackground=card_color,
-                             foreground=text_color,
-                             rowheight=30,
-                             font=('Helvetica', 10))
-        self.style.configure('Treeview.Heading',
-                             background=accent_color,
-                             foreground=text_color,
-                             font=('Helvetica', 10, 'bold'))
-        self.style.map('Treeview', background=[('selected', '#2a4d6e')])
-        self.style.configure('TButton',
-                             background=accent_color,
-                             foreground=text_color,
-                             font=('Helvetica', 10),
-                             padding=5)
-        self.style.map('TButton',
-                       background=[('active', '#2a4d6e')])
-        self.style.configure('TRadiobutton',
-                             background=bg_color,
-                             foreground=text_color,
-                             font=('Helvetica', 9))
-        self.style.configure('TEntry',
-                             fieldbackground=card_color,
-                             foreground=text_color,
-                             insertcolor=text_color)
     def setup_styles(self):
         self.style = ttk.Style()
         self.style.theme_use('clam')
@@ -211,6 +178,7 @@ class CryptoParser:
             anchor='w',
             font=('Helvetica', 9)
         )
+        status_bar.pack(fill='x', padx=20, pady=(0, 10))
     def load_image_from_url(self, url, size=(30, 30)):
         try:
             response = requests.get(url, timeout=5)
@@ -308,6 +276,7 @@ class CryptoParser:
             prices.append([timestamp, price])
 
         return prices
+
     def update_data(self):
         threading.Thread(target=self.load_data, daemon=True).start()
         self.root.after(60000, self.update_data)
@@ -363,6 +332,7 @@ class CryptoParser:
                              tags=(change_color,),
                              iid=coin['id']
                              )
+
     def sort_coins(self, column=None):
         sort_mode = self.sort_var.get() if not column else column
 
@@ -582,15 +552,12 @@ class CryptoParser:
             text=f"Circulating Supply: {np.random.randint(10, 100)}M {self.selected_coin['symbol'].upper()}",
             font=('Helvetica', 10)
         ).pack(side='left', padx=10)
-
-        def update_chart(self):
-            if self.selected_coin:
-                self.load_chart_data()
-
-        def open_binance(self, symbol, action='buy'):
-            webbrowser.open(f"https://www.binance.com/en/trade/{symbol.upper()}_USDT?type=spot")
-
-    if __name__ == "__main__":
-        root = tk.Tk()
-        app = CryptoParser(root)
-        root.mainloop()
+    def update_chart(self):
+        if self.selected_coin:
+            self.load_chart_data()
+    def open_binance(self, symbol, action='buy'):
+        webbrowser.open(f"https://www.binance.com/en/trade/{symbol.upper()}_USDT?type=spot")
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = CryptoParser(root)
+    root.mainloop()
